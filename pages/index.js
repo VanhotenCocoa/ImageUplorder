@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => { fetchList(); }, []);
 
@@ -56,11 +57,41 @@ export default function Home() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 160px)', gap: 12 }}>
         {files.map(f => (
           <div key={f.key} style={{ width: 150 }}>
-            <img src={f.url} alt={f.key} style={{ width: '100%', height: 100, objectFit: 'cover' }} />
+            <img
+              src={f.url}
+              alt={f.key}
+              style={{ width: '100%', height: 100, objectFit: 'cover', cursor: 'pointer' }}
+              onClick={() => setSelectedImage(f)}
+            />
             <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.key}</div>
           </div>
         ))}
       </div>
+
+      {selectedImage && (
+        <div
+          onClick={() => setSelectedImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: 16,
+          }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh' }}>
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.key}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+            <p style={{ color: '#fff', marginTop: 8, wordBreak: 'break-all' }}>{selectedImage.key}</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
