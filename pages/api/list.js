@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
 
 const requiredEnv = ['AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'S3_BUCKET_NAME'];
 const missingEnv = requiredEnv.filter(name => !process.env[name]);
@@ -17,9 +17,22 @@ export default async function handler(req, res) {
   try {
     const command = new ListObjectsV2Command({ Bucket: process.env.S3_BUCKET_NAME });
     const data = await s3.send(command);
-    const items = (data.Contents || []).map(obj => ({
-      key: obj.Key,
-      url: `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${encodeURIComponent(obj.Key)}`
+    const items = await Promise.all((data.Contents || []).map(async obj => {
+      const head = await s3.send(new HeadObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: obj.Key }));
+      const metadata = head.Metadata || {};
+      const decodeMetadataValue = (value) => {
+        try {
+          return decodeURIComponent(value || '');
+        } catch {
+          return value || '';
+        }
+      };
+      return {
+        key: obj.Key,
+        url: `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${encodeURIComponent(obj.Key)}`,
+        userName: decodeMetadataValue(metadata.username || 'unknown'),
+        caption: decodeMetadataValue(metadata.caption || ''),
+      };
     }));
     res.json(items.reverse());
   } catch (err) {
